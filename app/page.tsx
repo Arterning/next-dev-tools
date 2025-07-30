@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Copy, Plus, Globe, Trash2, History, Save, FileText, Send } from "lucide-react"
 import Bookmarks from "@/components/bookmarks"
 import HttpClientComponent from "@/components/http-client"
+import { ModeToggle } from "@/components/theme-toggle"
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<"http-client" | "bookmarks">("http-client")
@@ -36,6 +37,7 @@ export default function App() {
                 </Button>
               </div>
             </div>
+            <ModeToggle />
           </div>
         </div>
       </nav>

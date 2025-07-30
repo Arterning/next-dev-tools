@@ -1,30 +1,19 @@
-# Next js request tool
-
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+# Next Dev Tools
 
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/shachanghuangprotonmes-projects/v0-next-js-request-tool)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/JEHwd7Nczbh)
 
-## Overview
+这是一个面向开发者的在线工具平台，旨在提供一系列便捷、高效的开发辅助功能。项目完全免费，无需登录注册即可使用。
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+## 主要功能
 
-## Deployment
+### 1. HTTP 客户端 (HTTP Client)
 
-Your project is live at:
+一个强大的网页版 API 调试工具，你可以在浏览器中直接发送 HTTP 请求、查看响应、设置 Headers 和请求体，轻松完成接口测试与调试，无需安装任何桌面应用。
 
-**[https://vercel.com/shachanghuangprotonmes-projects/v0-next-js-request-tool](https://vercel.com/shachanghuangprotonmes-projects/v0-next-js-request-tool)**
+### 2. 网站书签 (Bookmarks)
 
-## Build your app
+输入一个 URL，系统会自动抓取该网站的 Open Graph (OG) 信息，包括标题、描述和预览图，并以精美的卡片形式展示。方便你收藏和管理有价值的网站资源。
 
-Continue building your app on:
+## 我们的愿景
 
-**[https://v0.dev/chat/projects/JEHwd7Nczbh](https://v0.dev/chat/projects/JEHwd7Nczbh)**
-
-## How It Works
-
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+我们致力于为开发者打造一个“瑞士军刀”式的在线工具箱。未来，我们将持续迭代，不断集成更多有价值的开发工具，敬请期待！

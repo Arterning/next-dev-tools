@@ -5,60 +5,52 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Copy, Plus, Send, Trash2, History, Save, FileText } from "lucide-react"
+import {
+  Copy,
+  Plus,
+  Send,
+  Trash2,
+  History,
+  Save,
+  FileText,
+} from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { sendRequestAction } from "@/app/actions/http"
+import type {
+  HttpRequest,
+  HttpResponse,
+  SavedRequest,
+  Header,
+  Param,
+  FormDataItem,
+} from "@/lib/http-types"
 
-interface Header {
-  key: string
-  value: string
-  enabled: boolean
-}
-
-interface Param {
-  key: string
-  value: string
-  enabled: boolean
-}
-
-interface FormDataItem {
-  key: string
-  value: string
-  type: "text" | "file"
-  enabled: boolean
-}
-
-interface HttpRequest {
-  id: string
-  name: string
-  method: string
-  url: string
-  params: Param[]
-  headers: Header[]
-  bodyType: "none" | "json" | "form-data" | "x-www-form-urlencoded" | "raw"
-  jsonBody: string
-  formData: FormDataItem[]
-  rawBody: string
-  timestamp: number
-}
-
-interface HttpResponse {
-  status: number
-  statusText: string
-  headers: Record<string, string>
-  body: string
-  responseTime: number
-}
-
-interface SavedRequest extends HttpRequest {
-  response?: HttpResponse
-}
-
-const HTTP_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
+const HTTP_METHODS = [
+  "GET",
+  "POST",
+  "PUT",
+  "DELETE",
+  "PATCH",
+  "HEAD",
+  "OPTIONS",
+]
 
 export default function HttpClient() {
   const [currentRequest, setCurrentRequest] = useState<HttpRequest>({
@@ -100,7 +92,11 @@ export default function HttpClient() {
     setCurrentRequest((prev) => ({ ...prev, ...updates }))
   }
 
-  const updateParam = (index: number, field: keyof Param, value: string | boolean) => {
+  const updateParam = (
+    index: number,
+    field: keyof Param,
+    value: string | boolean
+  ) => {
     const newParams = [...currentRequest.params]
     newParams[index] = { ...newParams[index], [field]: value }
     updateRequest({ params: newParams })
@@ -117,7 +113,11 @@ export default function HttpClient() {
     updateRequest({ params: newParams })
   }
 
-  const updateHeader = (index: number, field: keyof Header, value: string | boolean) => {
+  const updateHeader = (
+    index: number,
+    field: keyof Header,
+    value: string | boolean
+  ) => {
     const newHeaders = [...currentRequest.headers]
     newHeaders[index] = { ...newHeaders[index], [field]: value }
     updateRequest({ headers: newHeaders })
@@ -134,7 +134,11 @@ export default function HttpClient() {
     updateRequest({ headers: newHeaders })
   }
 
-  const updateFormData = (index: number, field: keyof FormDataItem, value: string | boolean) => {
+  const updateFormData = (
+    index: number,
+    field: keyof FormDataItem,
+    value: string | boolean
+  ) => {
     const newFormData = [...currentRequest.formData]
     newFormData[index] = { ...newFormData[index], [field]: value }
     updateRequest({ formData: newFormData })
@@ -142,24 +146,16 @@ export default function HttpClient() {
 
   const addFormData = () => {
     updateRequest({
-      formData: [...currentRequest.formData, { key: "", value: "", type: "text", enabled: true }],
+      formData: [
+        ...currentRequest.formData,
+        { key: "", value: "", type: "text", enabled: true },
+      ],
     })
   }
 
   const removeFormData = (index: number) => {
     const newFormData = currentRequest.formData.filter((_, i) => i !== index)
     updateRequest({ formData: newFormData })
-  }
-
-  const buildUrlWithParams = () => {
-    const enabledParams = currentRequest.params.filter((p) => p.enabled && p.key && p.value)
-    if (enabledParams.length === 0) return currentRequest.url
-
-    const url = new URL(currentRequest.url.startsWith("http") ? currentRequest.url : `https://${currentRequest.url}`)
-    enabledParams.forEach((param) => {
-      url.searchParams.set(param.key, param.value)
-    })
-    return url.toString()
   }
 
   const sendRequest = async () => {
@@ -173,106 +169,35 @@ export default function HttpClient() {
     }
 
     setLoading(true)
-    const startTime = Date.now()
 
     try {
-      const enabledHeaders = currentRequest.headers
-        .filter((h) => h.enabled && h.key && h.value)
-        .reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {})
-
-      const requestOptions: RequestInit = {
-        method: currentRequest.method,
-        headers: enabledHeaders,
-      }
-
-      // Handle request body based on bodyType
-      if (currentRequest.method !== "GET" && currentRequest.method !== "HEAD" && currentRequest.bodyType !== "none") {
-        switch (currentRequest.bodyType) {
-          case "json":
-            if (currentRequest.jsonBody) {
-              requestOptions.body = currentRequest.jsonBody
-              if (!enabledHeaders["Content-Type"]) {
-                requestOptions.headers = { ...requestOptions.headers, "Content-Type": "application/json" }
-              }
-            }
-            break
-          case "form-data":
-            const formData = new FormData()
-            currentRequest.formData
-              .filter((item) => item.enabled && item.key)
-              .forEach((item) => {
-                formData.append(item.key, item.value)
-              })
-            requestOptions.body = formData
-            break
-          case "x-www-form-urlencoded":
-            const urlencoded = new URLSearchParams()
-            currentRequest.formData
-              .filter((item) => item.enabled && item.key)
-              .forEach((item) => {
-                urlencoded.append(item.key, item.value)
-              })
-            requestOptions.body = urlencoded
-            if (!enabledHeaders["Content-Type"]) {
-              requestOptions.headers = {
-                ...requestOptions.headers,
-                "Content-Type": "application/x-www-form-urlencoded",
-              }
-            }
-            break
-          case "raw":
-            if (currentRequest.rawBody) {
-              requestOptions.body = currentRequest.rawBody
-            }
-            break
-        }
-      }
-
-      const finalUrl = buildUrlWithParams()
-      const response = await fetch(finalUrl, requestOptions)
-      const responseTime = Date.now() - startTime
-
-      const responseHeaders: Record<string, string> = {}
-      response.headers.forEach((value, key) => {
-        responseHeaders[key] = value
-      })
-
-      let responseBody = ""
-      try {
-        const text = await response.text()
-        // Try to parse as JSON for pretty formatting
-        try {
-          const json = JSON.parse(text)
-          responseBody = JSON.stringify(json, null, 2)
-        } catch {
-          responseBody = text
-        }
-      } catch (error) {
-        responseBody = "Failed to read response body"
-      }
-
-      const httpResponse: HttpResponse = {
-        status: response.status,
-        statusText: response.statusText,
-        headers: responseHeaders,
-        body: responseBody,
-        responseTime,
-      }
-
+      const httpResponse = await sendRequestAction(currentRequest)
       setResponse(httpResponse)
 
-      toast({
-        title: "Request sent successfully",
-        description: `${response.status} ${response.statusText} (${responseTime}ms)`,
-      })
+      if (httpResponse.status === 0) {
+        toast({
+          title: "Request failed",
+          description: httpResponse.body,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Request sent successfully",
+          description: `${httpResponse.status} ${httpResponse.statusText} (${httpResponse.responseTime}ms)`,
+        })
+      }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred"
+      const responseTime = 0 // Not available on client error
       setResponse({
         status: 0,
-        statusText: "Network Error",
+        statusText: "Client Error",
         headers: {},
         body: errorMessage,
-        responseTime: Date.now() - startTime,
+        responseTime,
       })
 
       toast({
@@ -375,7 +300,9 @@ export default function HttpClient() {
     <div className="p-6">
       <div className="mb-6">
         <h2 className="text-2xl font-bold mb-2">HTTP Client</h2>
-        <p className="text-muted-foreground">A web-based tool for testing HTTP APIs</p>
+        <p className="text-muted-foreground">
+          A web-based tool for testing HTTP APIs
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -397,7 +324,9 @@ export default function HttpClient() {
             <CardContent>
               <ScrollArea className="h-[600px]">
                 {savedRequests.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">No saved requests yet</p>
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No saved requests yet
+                  </p>
                 ) : (
                   <div className="space-y-2">
                     {savedRequests.map((req) => (
@@ -436,11 +365,19 @@ export default function HttpClient() {
                           </div>
                         </div>
                         <p className="text-sm font-medium truncate">{req.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{req.url}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {req.url}
+                        </p>
                         {req.response && (
                           <div className="flex items-center gap-1 mt-1">
-                            <div className={`w-2 h-2 rounded-full ${getStatusColor(req.response.status)}`} />
-                            <span className="text-xs">{req.response.status}</span>
+                            <div
+                              className={`w-2 h-2 rounded-full ${getStatusColor(
+                                req.response.status
+                              )}`}
+                            />
+                            <span className="text-xs">
+                              {req.response.status}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -475,7 +412,10 @@ export default function HttpClient() {
             <CardContent className="space-y-4">
               {/* Request URL and Method */}
               <div className="flex gap-2">
-                <Select value={currentRequest.method} onValueChange={(value) => updateRequest({ method: value })}>
+                <Select
+                  value={currentRequest.method}
+                  onValueChange={(value) => updateRequest({ method: value })}
+                >
                   <SelectTrigger className="w-32">
                     <SelectValue />
                   </SelectTrigger>
@@ -526,22 +466,33 @@ export default function HttpClient() {
                         <input
                           type="checkbox"
                           checked={param.enabled}
-                          onChange={(e) => updateParam(index, "enabled", e.target.checked)}
+                          onChange={(e) =>
+                            updateParam(index, "enabled", e.target.checked)
+                          }
                           className="rounded"
                         />
                         <Input
                           placeholder="Key"
                           value={param.key}
-                          onChange={(e) => updateParam(index, "key", e.target.value)}
+                          onChange={(e) =>
+                            updateParam(index, "key", e.target.value)
+                          }
                           className="flex-1"
                         />
                         <Input
                           placeholder="Value"
                           value={param.value}
-                          onChange={(e) => updateParam(index, "value", e.target.value)}
+                          onChange={(e) =>
+                            updateParam(index, "value", e.target.value)
+                          }
                           className="flex-1"
                         />
-                        <Button onClick={() => removeParam(index)} variant="outline" size="sm" className="px-2">
+                        <Button
+                          onClick={() => removeParam(index)}
+                          variant="outline"
+                          size="sm"
+                          className="px-2"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -563,22 +514,33 @@ export default function HttpClient() {
                         <input
                           type="checkbox"
                           checked={header.enabled}
-                          onChange={(e) => updateHeader(index, "enabled", e.target.checked)}
+                          onChange={(e) =>
+                            updateHeader(index, "enabled", e.target.checked)
+                          }
                           className="rounded"
                         />
                         <Input
                           placeholder="Key"
                           value={header.key}
-                          onChange={(e) => updateHeader(index, "key", e.target.value)}
+                          onChange={(e) =>
+                            updateHeader(index, "key", e.target.value)
+                          }
                           className="flex-1"
                         />
                         <Input
                           placeholder="Value"
                           value={header.value}
-                          onChange={(e) => updateHeader(index, "value", e.target.value)}
+                          onChange={(e) =>
+                            updateHeader(index, "value", e.target.value)
+                          }
                           className="flex-1"
                         />
-                        <Button onClick={() => removeHeader(index)} variant="outline" size="sm" className="px-2">
+                        <Button
+                          onClick={() => removeHeader(index)}
+                          variant="outline"
+                          size="sm"
+                          className="px-2"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -591,7 +553,9 @@ export default function HttpClient() {
                     <Label>Body Type:</Label>
                     <Select
                       value={currentRequest.bodyType}
-                      onValueChange={(value: any) => updateRequest({ bodyType: value })}
+                      onValueChange={(value: any) =>
+                        updateRequest({ bodyType: value })
+                      }
                     >
                       <SelectTrigger className="w-48">
                         <SelectValue />
@@ -600,7 +564,9 @@ export default function HttpClient() {
                         <SelectItem value="none">None</SelectItem>
                         <SelectItem value="json">JSON</SelectItem>
                         <SelectItem value="form-data">Form Data</SelectItem>
-                        <SelectItem value="x-www-form-urlencoded">x-www-form-urlencoded</SelectItem>
+                        <SelectItem value="x-www-form-urlencoded">
+                          x-www-form-urlencoded
+                        </SelectItem>
                         <SelectItem value="raw">Raw</SelectItem>
                       </SelectContent>
                     </Select>
@@ -613,17 +579,24 @@ export default function HttpClient() {
                         id="json-body"
                         placeholder='{"key": "value"}'
                         value={currentRequest.jsonBody}
-                        onChange={(e) => updateRequest({ jsonBody: e.target.value })}
+                        onChange={(e) =>
+                          updateRequest({ jsonBody: e.target.value })
+                        }
                         className="min-h-[200px] font-mono"
                       />
                     </div>
                   )}
 
-                  {(currentRequest.bodyType === "form-data" || currentRequest.bodyType === "x-www-form-urlencoded") && (
+                  {(currentRequest.bodyType === "form-data" ||
+                    currentRequest.bodyType === "x-www-form-urlencoded") && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label>Form Data</Label>
-                        <Button onClick={addFormData} variant="outline" size="sm">
+                        <Button
+                          onClick={addFormData}
+                          variant="outline"
+                          size="sm"
+                        >
                           <Plus className="h-4 w-4 mr-1" />
                           Add Field
                         </Button>
@@ -634,25 +607,37 @@ export default function HttpClient() {
                             <input
                               type="checkbox"
                               checked={item.enabled}
-                              onChange={(e) => updateFormData(index, "enabled", e.target.checked)}
+                              onChange={(e) =>
+                                updateFormData(
+                                  index,
+                                  "enabled",
+                                  e.target.checked
+                                )
+                              }
                               className="rounded"
                             />
                             <Input
                               placeholder="Key"
                               value={item.key}
-                              onChange={(e) => updateFormData(index, "key", e.target.value)}
+                              onChange={(e) =>
+                                updateFormData(index, "key", e.target.value)
+                              }
                               className="flex-1"
                             />
                             <Input
                               placeholder="Value"
                               value={item.value}
-                              onChange={(e) => updateFormData(index, "value", e.target.value)}
+                              onChange={(e) =>
+                                updateFormData(index, "value", e.target.value)
+                              }
                               className="flex-1"
                             />
                             {currentRequest.bodyType === "form-data" && (
                               <Select
                                 value={item.type}
-                                onValueChange={(value: any) => updateFormData(index, "type", value)}
+                                onValueChange={(value: any) =>
+                                  updateFormData(index, "type", value)
+                                }
                               >
                                 <SelectTrigger className="w-20">
                                   <SelectValue />
@@ -663,7 +648,12 @@ export default function HttpClient() {
                                 </SelectContent>
                               </Select>
                             )}
-                            <Button onClick={() => removeFormData(index)} variant="outline" size="sm" className="px-2">
+                            <Button
+                              onClick={() => removeFormData(index)}
+                              variant="outline"
+                              size="sm"
+                              className="px-2"
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -679,7 +669,9 @@ export default function HttpClient() {
                         id="raw-body"
                         placeholder="Enter raw body content"
                         value={currentRequest.rawBody}
-                        onChange={(e) => updateRequest({ rawBody: e.target.value })}
+                        onChange={(e) =>
+                          updateRequest({ rawBody: e.target.value })
+                        }
                         className="min-h-[200px] font-mono"
                       />
                     </div>
@@ -690,7 +682,9 @@ export default function HttpClient() {
                   <div className="text-center py-8 text-muted-foreground">
                     <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
                     <p>Authentication features coming soon</p>
-                    <p className="text-sm">Bearer Token, API Key, OAuth support</p>
+                    <p className="text-sm">
+                      Bearer Token, API Key, OAuth support
+                    </p>
                   </div>
                 </TabsContent>
               </Tabs>
@@ -706,25 +700,37 @@ export default function HttpClient() {
                   <Badge className={getStatusColor(response.status)}>
                     {response.status} {response.statusText}
                   </Badge>
-                  <span className="text-sm font-normal text-muted-foreground">Time: {response.responseTime}ms</span>
+                  <span className="text-sm font-normal text-muted-foreground">
+                    Time: {response.responseTime}ms
+                  </span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Response Headers */}
                 <div>
-                  <Label className="text-base font-semibold">Response Headers</Label>
+                  <Label className="text-base font-semibold">
+                    Response Headers
+                  </Label>
                   <Card className="mt-2">
                     <CardContent className="p-4">
                       {Object.keys(response.headers).length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No headers</p>
+                        <p className="text-sm text-muted-foreground">
+                          No headers
+                        </p>
                       ) : (
                         <div className="space-y-1">
-                          {Object.entries(response.headers).map(([key, value]) => (
-                            <div key={key} className="flex gap-2 text-sm">
-                              <span className="font-medium min-w-0 flex-shrink-0">{key}:</span>
-                              <span className="text-muted-foreground break-all">{value}</span>
-                            </div>
-                          ))}
+                          {Object.entries(response.headers).map(
+                            ([key, value]) => (
+                              <div key={key} className="flex gap-2 text-sm">
+                                <span className="font-medium min-w-0 flex-shrink-0">
+                                  {key}:
+                                </span>
+                                <span className="text-muted-foreground break-all">
+                                  {value}
+                                </span>
+                              </div>
+                            )
+                          )}
                         </div>
                       )}
                     </CardContent>
@@ -733,7 +739,9 @@ export default function HttpClient() {
 
                 {/* Response Body */}
                 <div>
-                  <Label className="text-base font-semibold">Response Body</Label>
+                  <Label className="text-base font-semibold">
+                    Response Body
+                  </Label>
                   <Card className="mt-2">
                     <CardContent className="p-0">
                       <ScrollArea className="h-[400px]">

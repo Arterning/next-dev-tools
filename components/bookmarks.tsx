@@ -25,6 +25,7 @@ interface Bookmark {
   image: string
   siteName: string
   timestamp: number
+  category?: string
 }
 
 export default function Bookmarks() {
@@ -32,7 +33,9 @@ export default function Bookmarks() {
   const [searchQuery, setSearchQuery] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [newUrl, setNewUrl] = useState("")
+  const [newCategory, setNewCategory] = useState("")
   const [loading, setLoading] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState("All")
 
   // Load bookmarks from localStorage on component mount
   useEffect(() => {
@@ -51,7 +54,14 @@ export default function Bookmarks() {
     localStorage.setItem("bookmarks", JSON.stringify(bookmarks))
   }, [bookmarks])
 
-  const filteredBookmarks = bookmarks.filter(
+  const allCategories = ["All", ...Array.from(new Set(bookmarks.map((b) => b.category).filter(Boolean)))] as string[]
+
+  const filteredBookmarks = bookmarks
+    .filter(
+      (bookmark) =>
+        selectedCategory === "All" || bookmark.category === selectedCategory,
+    )
+    .filter(
     (bookmark) =>
       bookmark.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       bookmark.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -120,10 +130,12 @@ export default function Bookmarks() {
         image: ogData.image || "",
         siteName: ogData.siteName || new URL(validUrl).hostname,
         timestamp: Date.now(),
+        category: newCategory.trim(),
       }
 
       setBookmarks((prev) => [newBookmark, ...prev])
       setNewUrl("")
+      setNewCategory("")
       setIsDialogOpen(false)
 
       toast({
@@ -173,12 +185,19 @@ export default function Bookmarks() {
                 <DialogTitle>Add New Bookmark</DialogTitle>
                 <DialogDescription>Enter a URL to create a bookmark with automatic link preview</DialogDescription>
               </DialogHeader>
-              <div className="space-y-4">
-                <div>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
                   <Input
                     placeholder="https://example.com"
                     value={newUrl}
                     onChange={(e) => setNewUrl(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Category (optional)"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !loading) {
                         addBookmark()
@@ -210,7 +229,7 @@ export default function Bookmarks() {
         </div>
 
         {/* Search */}
-        <div className="relative max-w-md">
+        <div className="relative max-w-md mb-4">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             placeholder="Search bookmarks..."
@@ -219,21 +238,38 @@ export default function Bookmarks() {
             className="pl-10"
           />
         </div>
+        
+        {/* Categories */}
+        {allCategories.length > 1 && <div className="flex flex-wrap gap-2 mb-4">
+          {allCategories.map((category) => (
+            <Badge
+              key={category}
+              variant={selectedCategory === category ? "default" : "secondary"}
+              onClick={() => setSelectedCategory(category)}
+              className="cursor-pointer transition-all hover:scale-105"
+            >
+              {category}
+            </Badge>
+          ))}
+        </div>}
       </div>
 
       {/* Bookmarks Grid */}
       {filteredBookmarks.length === 0 ? (
         <div className="text-center py-12">
           <Globe className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <h3 className="text-lg font-semibold mb-2">{searchQuery ? "No bookmarks found" : "No bookmarks yet"}</h3>
+          <h3 className="text-lg font-semibold mb-2">{searchQuery || selectedCategory !== 'All' ? "No bookmarks found" : "No bookmarks yet"}</h3>
           <p className="text-muted-foreground mb-4">
-            {searchQuery
-              ? "Try adjusting your search terms"
+            {searchQuery || selectedCategory !== 'All'
+              ? "Try adjusting your search or filter"
               : "Start by adding your first bookmark with the button above"}
           </p>
-          {searchQuery && (
-            <Button variant="outline" onClick={() => setSearchQuery("")}>
-              Clear Search
+          {(searchQuery || selectedCategory !== 'All') && (
+            <Button variant="outline" onClick={() => {
+              setSearchQuery("")
+              setSelectedCategory("All")
+            }}>
+              Clear Search & Filters
             </Button>
           )}
         </div>
@@ -263,11 +299,18 @@ export default function Bookmarks() {
                       <CardTitle className="text-base line-clamp-2 group-hover:text-primary transition-colors">
                         {bookmark.title}
                       </CardTitle>
-                      {bookmark.siteName && (
-                        <Badge variant="secondary" className="mt-1 text-xs">
-                          {bookmark.siteName}
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {bookmark.siteName && (
+                          <Badge variant="secondary" className="text-xs">
+                            {bookmark.siteName}
+                          </Badge>
+                        )}
+                        {bookmark.category && (
+                          <Badge variant="outline" className="text-xs">
+                            {bookmark.category}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button
